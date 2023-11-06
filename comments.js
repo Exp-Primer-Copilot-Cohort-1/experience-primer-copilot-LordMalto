@@ -1,60 +1,60 @@
 // Create a web server
-// 1. Create a web server
-// 2. Create a request handler
-// 3. Start the server and listen on a port
-// 4. Test with a browser
-// 5. Test with curl or postman
+// Run it by node comments.js
+// Access it via http://localhost:3000
 
-// 1. Create a web server
-const express = require('express');
-const app = express();
-const path = require('path');
-const bodyParser = require('body-parser');
-const { check, validationResult } = require('express-validator');
+// Load the http module to create an http server.
+var http = require('http');
+var fs = require('fs');
+var qs = require('querystring');
+var comments = require('./comments.json');
 
-// 2. Create a request handler
-// 3. Start the server and listen on a port
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+// Configure our HTTP server to respond with Hello World to all requests.
+var server = http.createServer(function (request, response) {
+  var url = request.url;
+  var method = request.method;
+  var body = '';
 
-// parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: false }));
-// parse application/json
-app.use(bodyParser.json());
-
-const comments = [
-    { username: 'alice', body: 'Lorem ipsum dolor sit amet.' },
-    { username: 'bob', body: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam, voluptatum?' },
-    { username: 'charlie', body: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam, voluptatum?' },
-    { username: 'david', body: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam, voluptatum?' },
-    { username: 'eve', body: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam, voluptatum?' },
-];
-
-app.get('/', (req, res) => {
-    res.render('index', { comments });
-});
-
-app.get('/new', (req, res) => {
-    res.render('new');
-});
-
-// 5. Test with curl or postman
-app.post('/new', [
-    check('username').isLength({ min: 3 }),
-    check('body').isLength({ min: 5 }),
-], (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        // return res.status(422).json({ errors: errors.array() });
-        return res.render('new', { errors: errors.array() });
+  if (url === '/') {
+    if (method === 'GET') {
+      response.writeHead(200, {'Content-Type': 'text/html'});
+      fs.readFile('index.html', 'utf8', function(err, data) {
+        if (err) throw err;
+        response.write(data);
+        response.end();
+      });
     }
-
-    const { username, body } = req.body;
-    comments.push({ username, body });
-    res.redirect('/');
+  }
+  else if (url === '/comments') {
+    if (method === 'GET') {
+      response.writeHead(200, {'Content-Type': 'application/json'});
+      response.write(JSON.stringify(comments));
+      response.end();
+    }
+    else if (method === 'POST') {
+      request.on('data', function (chunk) {
+        body += chunk;
+      });
+      request.on('end', function () {
+        var obj = qs.parse(body);
+        comments.push(obj);
+        fs.writeFile('comments.json', JSON.stringify(comments), function(err) {
+          if (err) throw err;
+          console.log('It\'s saved!');
+        });
+        response.writeHead(200, {'Content-Type': 'application/json'});
+        response.write(JSON.stringify(comments));
+        response.end();
+      });
+    }
+  }
+  else {
+    response.writeHead(404, {'Content-Type': 'text/plain'});
+    response.write('404 Not Found\n');
+    response.end();
+  }
 });
 
-app.listen(3000, () => console.log('Listening on port 3000...'));
+// Listen on port 3000, IP defaults to
 
 
 
